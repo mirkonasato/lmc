@@ -8,6 +8,8 @@ It should work with any [OpenAI-compatible API](https://platform.openai.com/docs
 
 You can use it either to chat interactively or chain it with other commands for scripting.
 
+![lmc](https://github.com/user-attachments/assets/41129606-047e-41c6-88a2-48580759309e)
+
 ## Installation
 
 `lmc` is written in Rust and comes as a single executable file. You can download binaries for Linux, macOS, and Windows from the [latest release](https://github.com/mirkonasato/lmc/releases/latest) page, or build it from source yourself using [Cargo](https://doc.rust-lang.org/cargo/commands/cargo-install.html).
