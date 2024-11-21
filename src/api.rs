@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Result};
 use eventsource_stream::{Event, EventStream, EventStreamError};
 use futures_util::{Stream, StreamExt};
 use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use reqwest::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::config::Config;
 
@@ -22,7 +22,7 @@ impl Message {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     Assistant,
@@ -64,18 +64,30 @@ struct Delta {
     content: Option<String>,
 }
 
+#[derive(Debug, Error)]
+pub enum ApiError {
+    #[error(transparent)]
+    RequestFailed(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    ResponseStreamingFailed(#[from] EventStreamError<reqwest::Error>),
+
+    #[error(transparent)]
+    UnexpectedEventData(#[from] serde_json::Error),
+}
+
 pub struct ApiClient {
     config: Config,
 }
 
 impl ApiClient {
-    pub fn new(config: &Config) -> Result<Self> {
-        Ok(Self {
+    pub fn new(config: &Config) -> Self {
+        Self {
             config: config.to_owned(),
-        })
+        }
     }
 
-    pub async fn get_chat_completion(&self, messages: &Vec<Message>) -> Result<String> {
+    pub async fn get_chat_completion(&self, messages: &Vec<Message>) -> Result<String, ApiError> {
         let response: ChatResponse = self
             .prepare_request(false, messages)
             .send()
@@ -91,7 +103,7 @@ impl ApiClient {
     pub async fn stream_chat_completion(
         &self,
         messages: &Vec<Message>,
-    ) -> Result<impl Stream<Item = Result<Option<String>>>> {
+    ) -> Result<impl Stream<Item = Result<Option<String>, ApiError>>, ApiError> {
         let response = self.prepare_request(true, messages).send().await?;
         let stream = EventStream::new(response.bytes_stream()).map(parse_event_data);
         Ok(stream)
@@ -119,18 +131,14 @@ impl ApiClient {
 
 fn parse_event_data(
     item: Result<Event, EventStreamError<reqwest::Error>>,
-) -> Result<Option<String>> {
-    match item {
-        Ok(event) => {
-            if event.data == "[DONE]" {
-                return Ok(None);
-            }
-            let data: EventData = serde_json::from_str(&event.data)?;
-            match data.choices.first() {
-                Some(choice) => Ok(choice.delta.content.to_owned()),
-                None => Ok(None),
-            }
-        }
-        Err(error) => Err(anyhow!("Failed to read event: {}", error)),
+) -> Result<Option<String>, ApiError> {
+    let event = item?;
+    if event.data == "[DONE]" {
+        return Ok(None);
+    }
+    let data: EventData = serde_json::from_str(&event.data)?;
+    match data.choices.first() {
+        None => Ok(None),
+        Some(choice) => Ok(choice.delta.content.to_owned()),
     }
 }

@@ -8,6 +8,10 @@ It should work with any [OpenAI-compatible API](https://platform.openai.com/docs
 
 You can use it either to chat interactively or chain it with other commands for scripting.
 
+## Installation
+
+`lmc` is written in Rust and comes as a single executable file. You can download binaries for Linux, macOS, and Windows from the [latest release](https://github.com/mirkonasato/lmc/releases/latest) page, or build it from source yourself using [Cargo](https://doc.rust-lang.org/cargo/commands/cargo-install.html).
+
 ## Usage
 
 At a minimum you need to specific which `api_url` and `model` to use. E.g. to call a local Ollama server:
@@ -30,8 +34,6 @@ lmc --api-url "https://api.groq.com/openai/v1" \
   --api-key "gsk_abcdef123456" \
   --model "gemma2-9b-it"
 ```
-
-The prompt supports line editing, courtesy of [RustyLine](https://github.com/kkawakam/rustyline). To exit press `Ctrl+D` or enter `/q` or `/quit`.
 
 ## Configuration
 
@@ -95,9 +97,22 @@ In the above `spanish-translator` will inherit the `model` from `llama-3` and th
 
 You can also override any configuration setting at execution time by passing the corresponding command line argument.
 
-## Non-Interactive Usage
+## Interactive Mode
 
-`lmc` optionally accepts the user prompt text via standard input. This way you can pipe in the output of another command.
+Chatting interactively supports line editing, courtesy of [RustyLine](https://github.com/kkawakam/rustyline).
+
+By default each input line is sent as a separate message upon pressing `Enter`, however pasted text can include multiple lines. End a line with `\` to enter multiple lines manually.
+
+The following prompts are treated as special _commands_:
+
+* `/quit` or `/q`: exits the interactive loop. `Ctrl+D` also works.
+* `/retry` or `/r`: resends the last prompt. Useful e.g. to generate multiple AI responses to the same query for creative purposes.
+
+More commands might be added in future versions.
+
+## Non-Interactive Mode
+
+`lmc` also accepts a user prompt via standard input. This way you can pipe in the output of another command.
 
 For example, you could summarise a PDF document with
 ```
@@ -107,7 +122,7 @@ For example, you could summarise a PDF document with
 
 ([pdftotext](https://manpages.debian.org/experimental/poppler-utils/pdftotext.1.en.html) is a command provided by `poppler-utils`.)
 
-Unlike in interactive mode, in this case `lmc` will exit after the first response, allowing you to do further processing on the output.
+Unlike in interactive mode, in this case `lmc` will exit immeditately after the first response, allowing you to do further processing on the output.
 
 ## Related Projects
 

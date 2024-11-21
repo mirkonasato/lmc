@@ -43,8 +43,7 @@ pub struct Args {
     pub no_streaming: bool,
 }
 
-#[derive(Clone, Deserialize)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Config {
     pub api_url: String,
     pub api_key: Option<String>,
@@ -67,9 +66,8 @@ impl Config {
     }
 }
 
-#[derive(Clone, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(test, derive(Debug))]
 struct Profile {
     pub api_key: Option<String>,
     pub api_url: Option<String>,

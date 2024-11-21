@@ -4,18 +4,17 @@ mod console;
 
 use std::io::{self, IsTerminal};
 
-use anyhow::Result;
 use clap::Parser;
 use futures_util::StreamExt;
 
-use crate::api::{ApiClient, Message, Role};
+use crate::api::{ApiClient, ApiError, Message, Role};
 use crate::console::Console;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     let args = config::Args::parse();
     let config = config::get_config(&args)?;
-    let api_client = ApiClient::new(&config)?;
+    let api_client = ApiClient::new(&config);
     let interactive = io::stdin().is_terminal();
 
     let mut console = Console::new()?;
@@ -33,11 +32,20 @@ async fn main() -> Result<()> {
             match console.read_interactive_input()? {
                 None => break, // EOF
                 Some(command) if command == "/q" || command == "/quit" => break,
+                Some(command) if command == "/r" || command == "/retry" => {
+                    if let Some(message) = messages.last() {
+                        if message.role == Role::Assistant {
+                            messages.pop();
+                        }
+                    }
+                }
                 Some(user_prompt) => messages.push(Message::new(Role::User, &user_prompt)),
             }
-            let completion =
-                get_and_print_completion(&api_client, &messages, !args.no_streaming).await?;
-            messages.push(Message::new(Role::Assistant, &completion));
+            let result = get_and_print_completion(&api_client, &messages, !args.no_streaming).await;
+            match result {
+                Ok(completion) => messages.push(Message::new(Role::Assistant, &completion)),
+                Err(error) => eprintln!("[e] {:?}", error),
+            }
         }
     } else {
         let user_prompt = console.read_piped_input()?;
@@ -52,7 +60,7 @@ async fn get_and_print_completion(
     api_client: &ApiClient,
     messages: &Vec<Message>,
     streaming: bool,
-) -> Result<String> {
+) -> Result<String, ApiError> {
     if !streaming {
         let completion = api_client.get_chat_completion(messages).await?;
         println!("{}", completion);
