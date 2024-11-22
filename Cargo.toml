@@ -1,13 +1,13 @@
 [package]
 name = "lmc"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/mirkonasato/lmc"
 
 [dependencies]
 anyhow = "1.0.93"
-clap = { version = "4.5.20", features = ["derive"] }
+argh = "0.1.12"
 eventsource-stream = "0.2.3"
 futures-util = "0.3.31"
 home = "0.5.9"

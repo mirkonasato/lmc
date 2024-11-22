@@ -3,44 +3,48 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, ensure, Context, Result};
-use clap::Parser;
+use argh::FromArgs;
 use home::home_dir;
 use serde::Deserialize;
 
 /// LMC - Large Model Client: interact with LLM APIs from the command line
-#[derive(Debug, Parser)]
-#[command(version)]
+#[derive(Debug, FromArgs)]
 pub struct Args {
-    /// Base URL, e.g. "http://localhost:11434/v1" for Ollama
-    #[arg(short = 'u', long)]
+    /// base URL, e.g. "http://localhost:11434/v1" for Ollama
+    #[argh(option, short = 'u')]
     pub api_url: Option<String>,
 
-    /// Secret key, if the API requires authentication
-    #[arg(short = 'k', long)]
+    /// secret key, if the API requires authentication
+    #[argh(option, short = 'k')]
     pub api_key: Option<String>,
 
-    /// Model name, e.g. "gemma2:9b"
-    #[arg(short, long)]
+    /// model name, e.g. "gemma2:9b"
+    #[argh(option, short = 'm')]
     pub model: Option<String>,
 
-    /// Initial instructions for the assistant
-    #[arg(short, long)]
+    /// initial instructions for the assistant
+    #[argh(option, short = 's')]
     pub system_prompt: Option<String>,
 
-    #[arg(short, long)]
+    /// parameter passed directly to the API
+    #[argh(option, short = 't')]
     pub temperature: Option<f32>,
 
-    /// Configuration file; default: "$HOME/.lmc/config.toml"
-    #[arg(short, long)]
+    /// configuration file; default: "$HOME/.lmc/config.toml"
+    #[argh(option, short = 'c')]
     pub config: Option<String>,
 
-    /// Configuration profile; default: "default"
-    #[arg(short, long)]
+    /// configuration profile; default: "default"
+    #[argh(option, short = 'p')]
     pub profile: Option<String>,
 
-    /// Disable response streaming
-    #[arg(long)]
-    pub no_streaming: bool,
+    /// disable response streaming
+    #[argh(switch)]
+    pub no_streaming: Option<bool>,
+
+    /// display the version
+    #[argh(switch, short = 'v', long = "version")]
+    pub print_version: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -372,10 +376,11 @@ model = "gemma2:9b"
             api_url: None,
             config: None,
             model: None,
-            no_streaming: false,
+            no_streaming: None,
             profile: None,
             system_prompt: None,
             temperature: None,
+            print_version: false,
         }
     }
 
