@@ -40,7 +40,7 @@ pub struct Args {
 
     /// disable response streaming
     #[argh(switch)]
-    pub no_streaming: Option<bool>,
+    pub no_stream: Option<bool>,
 
     /// display the version
     #[argh(switch, short = 'v', long = "version")]
@@ -52,6 +52,7 @@ pub struct Config {
     pub api_url: String,
     pub api_key: Option<String>,
     pub model: String,
+    pub stream: bool,
     pub system_prompt: Option<String>,
     pub temperature: Option<f32>,
 }
@@ -64,6 +65,7 @@ impl Config {
             api_key: profile.api_key.to_owned(),
             api_url: profile.api_url.to_owned().unwrap(),
             model: profile.model.to_owned().unwrap(),
+            stream: profile.stream.unwrap_or(true),
             system_prompt: profile.system_prompt.to_owned(),
             temperature: profile.temperature.to_owned(),
         })
@@ -77,6 +79,7 @@ struct Profile {
     pub api_url: Option<String>,
     pub extends: Option<String>,
     pub model: Option<String>,
+    pub stream: Option<bool>,
     pub system_prompt: Option<String>,
     pub temperature: Option<f32>,
 }
@@ -88,6 +91,7 @@ impl Profile {
             api_url: None,
             extends: None,
             model: None,
+            stream: None,
             system_prompt: None,
             temperature: None,
         }
@@ -104,6 +108,9 @@ impl Profile {
         }
         if let Some(extends) = &other.extends {
             self.extends = Some(extends.to_owned());
+        }
+        if let Some(stream) = &other.stream {
+            self.stream = Some(stream.to_owned());
         }
         if let Some(system_prompt) = &other.system_prompt {
             self.system_prompt = Some(system_prompt.to_owned());
@@ -122,6 +129,9 @@ impl Profile {
         }
         if let Some(model) = &args.model {
             self.model = Some(model.to_owned());
+        }
+        if let Some(no_stream) = &args.no_stream {
+            self.stream = Some(!no_stream);
         }
         if let Some(system_prompt) = &args.system_prompt {
             self.system_prompt = Some(system_prompt.to_owned());
@@ -235,6 +245,7 @@ model = "gemma2:9b"
                 api_key: None,
                 api_url: String::from("http://localhost:11434/v1"),
                 model: String::from("gemma2:9b"),
+                stream: true,
                 system_prompt: None,
                 temperature: None,
             }
@@ -260,6 +271,7 @@ system_prompt = "You are a helpful assistant."
 extends = "llama3-70b"
 system_prompt = "You are a poet, and will answer any question in rhyme."
 temperature = 1.5
+stream = false
 "#,
         )?;
 
@@ -273,6 +285,7 @@ temperature = 1.5
                 api_url: String::from("https://api.groq.com/openai/v1"),
                 api_key: Some(String::from("gsk_abc123")),
                 model: String::from("llama-3.1-70b-versatile"),
+                stream: false,
                 system_prompt: Some(String::from(
                     "You are a poet, and will answer any question in rhyme."
                 )),
@@ -295,6 +308,7 @@ system_prompt = "You are a helpful assistant."
 
         let mut args = args_with_config(&config_file)?;
         args.model = Some(String::from("llama3.1:8b"));
+        args.no_stream = Some(true);
         args.system_prompt = Some(String::from("Summarise the text provided as input."));
 
         let config = get_config(&args)?;
@@ -304,6 +318,7 @@ system_prompt = "You are a helpful assistant."
                 api_url: String::from("http://localhost:11434/v1"),
                 api_key: None,
                 model: String::from("llama3.1:8b"),
+                stream: false,
                 system_prompt: Some(String::from("Summarise the text provided as input.")),
                 temperature: None,
             }
@@ -312,7 +327,7 @@ system_prompt = "You are a helpful assistant."
     }
 
     #[test]
-    fn missing_selected_profile() -> Result<()> {
+    fn circular_references() -> Result<()> {
         let config_file = write_temp_config(
             r#"
 [profile-1]
@@ -343,7 +358,7 @@ model = "llama3.1:8b"
     }
 
     #[test]
-    fn circular_references() -> Result<()> {
+    fn missing_selected_profile() -> Result<()> {
         let config_file = write_temp_config(
             r#"
 [default]
@@ -376,7 +391,7 @@ model = "gemma2:9b"
             api_url: None,
             config: None,
             model: None,
-            no_streaming: None,
+            no_stream: None,
             profile: None,
             system_prompt: None,
             temperature: None,

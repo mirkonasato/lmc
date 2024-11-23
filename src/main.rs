@@ -20,7 +20,6 @@ async fn main() -> anyhow::Result<()> {
     let config = config::get_config(&args)?;
     let api_client = ApiClient::new(&config);
     let interactive = io::stdin().is_terminal();
-    let streaming = !args.no_streaming.unwrap_or(false);
 
     let mut console = Console::new()?;
     let mut messages: Vec<Message> = Vec::new();
@@ -46,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
                 }
                 Some(user_prompt) => messages.push(Message::new(Role::User, &user_prompt)),
             }
-            let result = get_and_print_completion(&api_client, &messages, streaming).await;
+            let result = get_and_print_completion(&api_client, &messages, config.stream).await;
             match result {
                 Ok(completion) => messages.push(Message::new(Role::Assistant, &completion)),
                 Err(error) => eprintln!("[e] {:?}", error),
@@ -55,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
     } else {
         let user_prompt = console.read_piped_input()?;
         messages.push(Message::new(Role::User, &user_prompt));
-        get_and_print_completion(&api_client, &messages, streaming).await?;
+        get_and_print_completion(&api_client, &messages, config.stream).await?;
     }
 
     Ok(())
@@ -64,22 +63,22 @@ async fn main() -> anyhow::Result<()> {
 async fn get_and_print_completion(
     api_client: &ApiClient,
     messages: &Vec<Message>,
-    streaming: bool,
+    stream: bool,
 ) -> Result<String, ApiError> {
-    if !streaming {
-        let completion = api_client.get_chat_completion(messages).await?;
-        println!("{}", completion);
-        Ok(completion)
-    } else {
-        let mut stream = api_client.stream_chat_completion(messages).await?;
+    if stream {
         let mut completion = String::new();
-        while let Some(event) = stream.next().await {
+        let mut events = api_client.stream_chat_completion(messages).await?;
+        while let Some(event) = events.next().await {
             if let Some(token) = event? {
                 completion.push_str(&token);
                 print!("{}", token);
             }
         }
         println!();
+        Ok(completion)
+    } else {
+        let completion = api_client.get_chat_completion(messages).await?;
+        println!("{}", completion);
         Ok(completion)
     }
 }
