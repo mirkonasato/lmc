@@ -1,15 +1,19 @@
 mod api;
 mod config;
 mod console;
+mod highlight;
+mod writer;
 
 use std::io::{self, IsTerminal};
 
 use anyhow::bail;
-use config::Config;
 use futures_util::StreamExt;
 
-use crate::api::{ApiClient, ApiError, Message, Role};
+use crate::api::{ApiClient, Message, Role};
+use crate::config::Config;
 use crate::console::Console;
+use crate::highlight::highlight_markdown;
+use crate::writer::StreamWriter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -37,21 +41,21 @@ async fn get_and_print_completion(
     api_client: &ApiClient,
     messages: &Vec<Message>,
     stream: bool,
-) -> Result<String, ApiError> {
+) -> anyhow::Result<String> {
     if stream {
-        let mut completion = String::new();
+        let mut writer = StreamWriter::new();
         let mut events = api_client.stream_chat_completion(messages).await?;
         while let Some(event) = events.next().await {
             if let Some(token) = event? {
-                completion.push_str(&token);
-                print!("{}", token);
+                writer.add_token(&token)?;
             }
         }
-        println!();
+        let completion = writer.complete()?;
         Ok(completion)
     } else {
         let completion = api_client.get_chat_completion(messages).await?;
-        println!("{}", completion);
+        let highlighted = highlight_markdown(&completion)?;
+        println!("{}", highlighted);
         Ok(completion)
     }
 }

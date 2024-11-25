@@ -18,6 +18,7 @@ serde_json = "1.0.133"
 thiserror = "2.0.3"
 tokio = { version = "1.41.1", features = ["full"] }
 toml = "0.8.19"
+tree-sitter-md = { version = "0.3.2", features = ["parser"] }
 
 [dev-dependencies]
 tempfile = "3.14.0"
