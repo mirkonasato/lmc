@@ -2,7 +2,7 @@ mod api;
 mod config;
 mod console;
 
-use std::io::{self, IsTerminal};
+use std::io::{self, IsTerminal, Write};
 
 use anyhow::bail;
 use config::Config;
@@ -39,12 +39,14 @@ async fn get_and_print_completion(
     stream: bool,
 ) -> Result<String, ApiError> {
     if stream {
+        let mut stdout = io::stdout();
         let mut completion = String::new();
         let mut events = api_client.stream_chat_completion(messages).await?;
         while let Some(event) = events.next().await {
             if let Some(token) = event? {
                 completion.push_str(&token);
                 print!("{}", token);
+                stdout.flush().unwrap_or(());
             }
         }
         println!();
